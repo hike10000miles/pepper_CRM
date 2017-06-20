@@ -22,11 +22,14 @@ const imageFilter = function (req, file, cb) {
     // accept image only
     if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
         return cb(new Error('Only image files are allowed!'), false);
-        //return cb(null, false);
     }
     cb(null, true);
 };
-const upload = multer({ dest: './uploads/', fileFilter: imageFilter}).single('image');
+const upload = multer({ 
+    dest: './uploads/', 
+    limits: { fieldSize: 2000 }, 
+    fileFilter: imageFilter
+}).single('image');
 
 const contactRoute = express.Router();
 
