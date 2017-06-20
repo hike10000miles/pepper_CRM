@@ -1,10 +1,8 @@
 const express     = require('express');
 const app         = express();
 const bodyParser  = require('body-parser');
-const multer      = require('multer');
 const morgan      = require('morgan');
 const mongoose    = require('mongoose');
-
 const jwt    = require('jsonwebtoken'); // used to create, sign, and verify tokens
 const config = require('./config'); // get our config file
 const usersRouter   = require('./controllers/user.controller'); // get our mongoose model
@@ -15,7 +13,6 @@ const User = require('./models/user');
 const Task = require('./models/task');
 const Debt = require('./models/debt');
 const Reminder = require('./models/reminder');
-const ProfileImage = require('./models/profileImage');
 
 const port = process.env.PORT || 8080;
 
@@ -24,6 +21,7 @@ const apiRouter = express.Router();
 mongoose.connect(config.database);
 
 app.set('superSecret', config.secret);
+app.set('profileImagePath', config.profileImagePath);
 
 app.use(bodyParser.urlencoded({ 
     extended: false
@@ -37,6 +35,7 @@ app.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     req.tokenKey = app.get('superSecret');
+    req.PROFILEIMAGE = app.get('profileImagePath');
     next();
 });
 
@@ -203,7 +202,6 @@ app.use('*', function (req, res) {
     });
 });
 
-app.use(multer({}))
 app.listen(port);
 
 console.log('Listening at http://localhost: ' + port);

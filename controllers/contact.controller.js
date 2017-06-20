@@ -13,6 +13,20 @@ const debtRouter = require('./debt.controller');
 const giftRouter = require('./gift.controller');
 const noteRouter = require('./note.controller');
 const reminderRouter = require('./reminder.controller');
+const fs = require('fs');
+const ProfileImage = require('../models/profileImage');
+const multer      = require('multer');
+const path = require('path');
+
+const imageFilter = function (req, file, cb) {
+    // accept image only
+    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+        return cb(new Error('Only image files are allowed!'), false);
+        //return cb(null, false);
+    }
+    cb(null, true);
+};
+const upload = multer({ dest: './uploads/', fileFilter: imageFilter}).single('image');
 
 const contactRoute = express.Router();
 
@@ -251,6 +265,85 @@ contactRoute.patch('/:contactId/significantOther', function(req, res) {
         } else {
             res.status(400).json({
                 message: 'Bad request'
+            });
+        }
+    });
+});
+
+contactRoute.get('/:contactId/photo', function(req, res) {
+    ProfileImage.findOne({_contactId: req.contact._id}, (err, image) => {
+        if (err) {
+            res.status(500).json({
+                err: err
+            });
+        } else if (image) {
+            fs.writeFile(path.join(req.PROFILEIMAGE, image._contactId), image.img,(err) => {
+                if (err) {
+                    res.status(500).json({
+                        err: err
+                    });
+                } else {
+                    let stream = fs.createReadStream(path.join(req.PROFILEIMAGE, image._contactId)).pipe(res);
+                    stream.on('finish', function() {
+                        console.log('Image dowloaded');
+                        fs.unlink(path.join(req.PROFILEIMAGE, image._contactId), (err) => {
+                            if(err) {
+                                console.log(err);
+                            }
+                        });
+                    })
+                }    
+            });
+        }
+    });
+});
+
+contactRoute.post('/:contactId/photo', function (req, res){
+    ProfileImage.remove({_contactId: req.contact._id}, (err) => {
+        if (err) {
+            res.status(500).json({
+                err: err
+            });
+        } else {
+            upload(req, res, function(err) {
+                if(err) {
+                    res.status(400).json({
+                        err: 'Please only upload image file like jpg and png. Also file has to be smaller than 2MB'
+                    })
+                } else {
+                    let newImage = new ProfileImage({
+                        img: fs.readFileSync(req.file.path),
+                        contentType: req.file.mimetype,
+                        _contactId: req.contact._id
+                    });
+                    newImage.save((err, image) => {
+                        fs.unlink(req.file.path, function(err) {
+                            if(err) {
+                                console.log(err);
+                                res.status(400).json({
+                                    err: err
+                                });
+                            } else {
+                                console.log("Uploaded file deleted.");
+                            }
+                        });
+                        if (err) {
+                            res.status(500).json({
+                                message: 'Server error, try again later.',
+                                err: err
+                            });
+                        } else if(image){
+                            res.status(200).json({
+                                message: 'New profile image has been added into the data base!',
+                                result: req.file
+                            });
+                        } else {
+                            res.status(400).json({
+                                message: 'Something went wrong. Try again.'
+                            });
+                        }
+                    });
+                }
             });
         }
     });

@@ -1,4 +1,5 @@
 module.exports = {
     'secret': 'friends',
-    'database': 'mongodb://127.0.0.1:27017/pepper'
+    'database': 'mongodb://127.0.0.1:27017/pepper',
+    'profileImagePath': './profileImages/',
 };
