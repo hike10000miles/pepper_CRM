@@ -13,6 +13,8 @@ const User = require('./models/user');
 const Task = require('./models/task');
 const Debt = require('./models/debt');
 const Reminder = require('./models/reminder');
+const mail = require('./controllers/mail.controller');
+const mailgun = require('mailgun-js')({apiKey: config.mailgunAPIKey, domain: config.emailDomin});
 
 const port = process.env.PORT || 8080;
 
@@ -23,15 +25,18 @@ mongoose.connect(config.database);
 app.set('superSecret', config.secret);
 app.set('profileImagePath', config.profileImagePath);
 
+
 app.use(bodyParser.urlencoded({ 
     extended: false
 }));
 
-app.use(bodyParser.json());
+//app.use(bodyParser.json());
 
 app.use(morgan('dev'));
 
 app.use(function (req, res, next) {
+    console.log(req.body);
+    req.body = JSON.parse(Object.keys(req.body)[0]);
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     req.tokenKey = app.get('superSecret');
@@ -52,10 +57,18 @@ app.post('/api/users', function(req, res) {
         email: req.body.email,
         password: req.body.password
     });
+    //console.log(req.body);
     user.save((err, user) => {
         if (err) {
             res.status(500).json(err);
         } else if (user) {
+            let email = mail.welcomeEmail(user.email, user.firstName);
+            mailgun.messages().send(email, function(error, body) {
+                if(error) {
+                    console.log(error);
+                }
+                console.log(body);
+            });
             res.status(200).json({
                 message: 'New user has been added into the data base!',
                 redirect_url: '/login',
